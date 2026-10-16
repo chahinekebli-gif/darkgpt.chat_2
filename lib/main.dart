@@ -1,451 +1,392 @@
-import android.app.Activity;
-import android.os.Bundle;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
-import android.content.ClipData;
-import android.content.ClipboardManager
-import android.content.Context;
-import android.view.Gravity;
-import android.view.View;
-import android.view.inputmethod.InputMethodManager;
-import android.view.inputmethod.EditorInfo;
-import android.widget.*;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-public class MainActivity extends Activity {
-
-    private static final int BG = Color.rgb(8, 10, 16);
-    private static final int PANEL = Color.rgb(20, 24, 36);
-    private static final int BLUE = Color.rgb(57, 136, 255);
-
-    // استبدل بالرابط الحقيقي بعد إنشاء الخادم
-    private static final String API_URL =
-            "https://YOUR-BACKEND-URL/chat";
-
-    private LinearLayout messages;
-    private EditText input;
-    private ScrollView scroll;
-    private Spinner modes;
-    private Button sendButton;
-    private TextView status;
-    private ProgressBar progress;
-
-    private boolean loading = false;
-    private final ExecutorService executor =
-            Executors.newSingleThreadExecutor();
-    private final JSONArray history = new JSONArray();
-
-    private final String[] modeKeys = {
-            "normal", "deep", "coding",
-            "cybersecurity", "negative"
-    };
-
-    private final String[] modeNames = {
-            "🤖 DarkGPT AI",
-            "🧠 Deep Thinking",
-            "💻 Coding AI",
-            "🛡️ Cybersecurity",
-            "⚫ Dark Analysis"
-    };
-
-    @Override
-    protected void onCreate(Bundle state) {
-        super.onCreate(state);
-
-        getWindow().setStatusBarColor(BG);
-        getWindow().setNavigationBarColor(BG);
-
-        buildUI();
-        addBubble("مرحباً بك في DarkGPT AI!\nاكتب رسالتك للبدء.",
-                false, false, false);
-    }
-
-    private GradientDrawable shape(int color, int radius) {
-        GradientDrawable d = new GradientDrawable();
-        d.setColor(color);
-        d.setCornerRadius(radius);
-        return d;
-    }
-
-    private TextView text(String value, int size) {
-        TextView t = new TextView(this);
-        t.setText(value);
-        t.setTextSize(size);
-        t.setTextColor(Color.WHITE);
-        return t;
-    }
-
-    private void buildUI() {
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(12, 8, 12, 8);
-        root.setBackgroundColor(BG);
-        setContentView(root);
-
-        // رأس التطبيق
-        LinearLayout header = new LinearLayout(this);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-
-        LinearLayout brand = new LinearLayout(this);
-        brand.setOrientation(LinearLayout.VERTICAL);
-
-        TextView title = text("DarkGPT AI", 23);
-        title.setTypeface(null, Typeface.BOLD);
-        brand.addView(title);
-
-        status = text("مساعدك الذكي", 12);
-        status.setTextColor(BLUE);
-        brand.addView(status);
-
-        header.addView(brand,
-                new LinearLayout.LayoutParams(0, -2, 1));
-
-        Button newChat = new Button(this);
-        newChat.setText("＋");
-        newChat.setContentDescription("محادثة جديدة");
-        header.addView(newChat);
-        root.addView(header);
-
-        newChat.setOnClickListener(v -> newConversation());
-
-        // اختيار نمط الذكاء الاصطناعي
-        modes = new Spinner(this);
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this,
-                android.R.layout.simple_spinner_item,
-                modeNames);
-
-        adapter.setDropDownViewResource(
-                android.R.layout.simple_spinner_dropdown_item);
-
-        modes.setAdapter(adapter);
-
-        LinearLayout.LayoutParams modeParams =
-                new LinearLayout.LayoutParams(-1, 50);
-
-        modeParams.setMargins(0, 8, 0, 8);
-        root.addView(modes, modeParams);
-
-        // منطقة المحادثة
-        scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-
-        messages = new LinearLayout(this);
-        messages.setOrientation(LinearLayout.VERTICAL);
-        messages.setPadding(2, 14, 2, 14);
-
-        scroll.addView(messages);
-
-        root.addView(scroll,
-                new LinearLayout.LayoutParams(-1, 0, 1));
-
-        // مؤشر الانتظار
-        progress = new ProgressBar(this);
-        progress.setIndeterminate(true);
-        progress.setVisibility(View.GONE);
-
-        root.addView(progress,
-                new LinearLayout.LayoutParams(28, 28));
-
-        // منطقة الكتابة
-        LinearLayout composer = new LinearLayout(this);
-        composer.setGravity(Gravity.CENTER_VERTICAL);
-        composer.setPadding(0, 8, 0, 4);
-
-        input = new EditText(this);
-        input.setTextColor(Color.WHITE);
-        input.setHintTextColor(Color.LTGRAY);
-        input.setHint("اكتب رسالتك...");
-        input.setTextSize(15);
-        input.setPadding(16, 10, 16, 10);
-        input.setMinHeight(52);
-        input.setMaxLines(5);
-        input.setBackground(shape(PANEL, 24));
-        input.setImeOptions(EditorInfo.IME_ACTION_SEND);
-
-        composer.addView(input,
-                new LinearLayout.LayoutParams(0, -2, 1));
-
-        sendButton = new Button(this);
-        sendButton.setText("↑");
-        sendButton.setTextSize(22);
-        sendButton.setTextColor(Color.WHITE);
-        sendButton.setBackground(shape(BLUE, 24));
-
-        LinearLayout.LayoutParams sendParams =
-                new LinearLayout.LayoutParams(58, 52);
-
-        sendParams.setMargins(7, 0, 0, 0);
-        composer.addView(sendButton, sendParams);
-        root.addView(composer);
-
-        sendButton.setOnClickListener(v -> sendMessage());
-
-        input.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEND) {
-                sendMessage();
-                return true;
-            }
-            return false;
-        });
-    }
-
-    private void addBubble(String value, boolean user,
-                           boolean error, boolean copyable) {
-
-        LinearLayout row = new LinearLayout(this);
-        row.setGravity(user ? Gravity.RIGHT : Gravity.LEFT);
-        row.setOrientation(LinearLayout.VERTICAL);
-
-        TextView bubble = text(value, 15);
-        bubble.setGravity(Gravity.START);
-        bubble.setPadding(15, 12, 15, 12);
-        bubble.setTextIsSelectable(true);
-
-        int color = error
-                ? Color.rgb(65, 27, 36)
-                : user
-                ? Color.rgb(23, 59, 114)
-                : PANEL;
-
-        bubble.setBackground(shape(color, 20));
-
-        int maxWidth = getResources()
-                .getDisplayMetrics().widthPixels - 48;
-
-        int width = Math.min(
-                (int) (getResources()
-                        .getDisplayMetrics().widthPixels * 0.82),
-                maxWidth);
-
-        LinearLayout.LayoutParams bubbleParams =
-                new LinearLayout.LayoutParams(width, -2);
-
-        row.addView(bubble, bubbleParams);
-
-        if (copyable && !user) {
-            TextView copy = text("نسخ الإجابة", 12);
-            copy.setTextColor(BLUE);
-            copy.setPadding(8, 5, 8, 5);
-
-            copy.setOnClickListener(v -> {
-                ClipboardManager clipboard =
-                        (ClipboardManager) getSystemService(
-                                Context.CLIPBOARD_SERVICE);
-
-                clipboard.setPrimaryClip(
-                        ClipData.newPlainText(
-                                "DarkGPT response", value));
-
-                Toast.makeText(this, "تم نسخ الإجابة",
-                        Toast.LENGTH_SHORT).show();
-            });
-
-            row.addView(copy);
-        }
-
-        LinearLayout.LayoutParams rowParams =
-                new LinearLayout.LayoutParams(-1, -2);
-
-        rowParams.setMargins(0, 0, 0, 12);
-        messages.addView(row, rowParams);
-
-        scroll.post(() ->
-                scroll.fullScroll(View.FOCUS_DOWN));
-    }
-
-    private void newConversation() {
-        if (loading) return;
-
-        messages.removeAllViews();
-
-        while (history.length() > 0) {
-            history.remove(0);
-        }
-
-        modes.setSelection(0);
-
-        addBubble("بدأت محادثة جديدة.",
-                false, false, false);
-    }
-
-    private void sendMessage() {
-        if (loading) return;
-
-        final String question =
-                input.getText().toString().trim();
-
-        if (question.isEmpty()) return;
-
-        if (API_URL.contains("YOUR-BACKEND-URL")) {
-            addBubble(
-                    "واجهة DarkGPT جاهزة، لكن لا يوجد خادم متصل. "
-                    + "أنشئ خادم API ثم ضع رابطه في API_URL.",
-                    false, true, false);
-            return;
-        }
-
-        final String selectedMode =
-                modeKeys[modes.getSelectedItemPosition()];
-
-        final JSONArray oldHistory = new JSONArray();
-
-        for (int i = 0; i < history.length(); i++) {
-            oldHistory.put(history.optJSONObject(i));
-        }
-
-        input.setText("");
-        hideKeyboard();
-
-        addBubble(question, true, false, false);
-
-        loading = true;
-        sendButton.setEnabled(false);
-        progress.setVisibility(View.VISIBLE);
-        status.setText("جارٍ الاتصال...");
-
-        final TextView waiting =
-                text("DarkGPT يفكر...", 14);
-
-        waiting.setTextColor(BLUE);
-        messages.addView(waiting);
-
-        scroll.post(() ->
-                scroll.fullScroll(View.FOCUS_DOWN));
-
-        executor.execute(() -> {
-            String answer;
-            boolean failed = false;
-            HttpURLConnection connection = null;
-
-            try {
-                JSONObject payload = new JSONObject();
-                payload.put("message", question);
-                payload.put("mode", selectedMode);
-                payload.put("history", oldHistory);
-
-                connection = (HttpURLConnection)
-                        new URL(API_URL).openConnection();
-
-                connection.setRequestMethod("POST");
-                connection.setConnectTimeout(15000);
-                connection.setReadTimeout(90000);
-                connection.setDoOutput(true);
-
-                connection.setRequestProperty(
-                        "Content-Type",
-                        "application/json; charset=UTF-8");
-
-                connection.setRequestProperty(
-                        "Accept", "application/json");
-
-                try (OutputStream out =
-                             connection.getOutputStream()) {
-                    out.write(payload.toString().getBytes(
-                            StandardCharsets.UTF_8));
-                }
-
-                int code = connection.getResponseCode();
-
-                InputStream stream =
-                        code >= 200 && code < 300
-                                ? connection.getInputStream()
-                                : connection.getErrorStream();
-
-                StringBuilder response = new StringBuilder();
-
-                if (stream != null) {
-                    try (BufferedReader reader =
-                                 new BufferedReader(
-                                         new InputStreamReader(
-                                                 stream,
-                                                 StandardCharsets.UTF_8))) {
-
-                        String line;
-
-                        while ((line = reader.readLine()) != null) {
-                            response.append(line);
-                        }
-                    }
-                }
-
-                if (code < 200 || code >= 300) {
-                    throw new IOException("HTTP " + code);
-                }
-
-                JSONObject data =
-                        new JSONObject(response.toString());
-
-                answer = data.optString(
-                        "reply",
-                        data.optString(
-                                "message",
-                                data.optString(
-                                        "response",
-                                        "لم يرجع الخادم إجابة.")));
-
-                JSONObject userItem = new JSONObject();
-                userItem.put("role", "user");
-                userItem.put("content", question);
-                history.put(userItem);
-
-                JSONObject assistantItem = new JSONObject();
-                assistantItem.put("role", "assistant");
-                assistantItem.put("content", answer);
-                history.put(assistantItem);
-
-            } catch (Exception e) {
-                answer = "تعذر الاتصال بالخادم. تحقق من رابط "
-                        + "API والإنترنت وإعدادات الخادم.";
-                failed = true;
-
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-            }
-
-            final String result = answer;
-            final boolean isError = failed;
-
-            runOnUiThread(() -> {
-                messages.removeView(waiting);
-
-                addBubble(result, false, isError, !isError);
-
-                loading = false;
-                sendButton.setEnabled(true);
-                progress.setVisibility(View.GONE);
-                status.setText("مساعدك الذكي");
-            });
-        });
-    }
-
-    private void hideKeyboard() {
-        try {
-            InputMethodManager imm =
-                    (InputMethodManager) getSystemService(
-                            Context.INPUT_METHOD_SERVICE);
-
-            imm.hideSoftInputFromWindow(
-                    input.getWindowToken(), 0);
-
-        } catch (Exception ignored) {
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        executor.shutdownNow();
-        super.onDestroy();
-    }
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080a10">
+<title>DarkGPT AI</title>
+
+<style>
+:root {
+  --bg: #080a10;
+  --panel: #141824;
+  --blue: #3988ff;
+  --text: #f4f6ff;
+  --muted: #929bb0;
 }
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+}
+
+.app {
+  max-width: 900px;
+  height: 100dvh;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #252b3a;
+}
+
+.brand h1 {
+  font-size: 23px;
+  margin: 0;
+  color: white;
+  text-shadow: 0 0 16px #3988ff66;
+}
+.brand p {
+  margin: 5px 0 0;
+  color: var(--blue);
+  font-size: 12px;
+}
+
+button, select, textarea { font: inherit; }
+
+button, select {
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid #293247;
+  border-radius: 12px;
+  padding: 11px;
+}
+
+button { cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 0;
+}
+.toolbar select { flex: 1; min-width: 0; }
+
+#chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  scroll-behavior: smooth;
+}
+
+.welcome {
+  text-align: center;
+  margin: auto;
+  padding: 24px 10px;
+}
+.logo {
+  width: 76px;
+  height: 76px;
+  margin: auto auto 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 25px;
+  font-size: 35px;
+  background: linear-gradient(145deg, #172b4d, #111521);
+  border: 1px solid #3988ff88;
+  box-shadow: 0 0 35px #3988ff22;
+}
+.welcome h2 { margin-bottom: 8px; }
+.welcome p { color: var(--muted); line-height: 1.8; }
+
+.message {
+  max-width: 88%;
+  padding: 14px;
+  border-radius: 18px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.user {
+  align-self: flex-start;
+  background: #173b72;
+  border: 1px solid #3988ff44;
+}
+.ai {
+  align-self: flex-end;
+  background: var(--panel);
+  border: 1px solid #ffffff0d;
+}
+.error {
+  background: #421d28;
+  align-self: flex-end;
+}
+.copy {
+  display: block;
+  padding: 5px 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: 12px;
+}
+#status {
+  color: var(--blue);
+  font-size: 12px;
+  min-height: 18px;
+  padding: 4px 2px;
+}
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 9px;
+  padding-top: 10px;
+  border-top: 1px solid #252b3a;
+}
+#prompt {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  max-height: 140px;
+  padding: 15px;
+  border: 1px solid #293247;
+  border-radius: 20px;
+  outline: none;
+  background: var(--panel);
+  color: white;
+  line-height: 1.5;
+}
+#prompt:focus { border-color: var(--blue); }
+
+#send {
+  width: 52px;
+  height: 52px;
+  font-size: 23px;
+  border: 0;
+  background: var(--blue);
+  color: white;
+  border-radius: 18px;
+}
+
+.footer {
+  text-align: center;
+  color: #6f7789;
+  font-size: 11px;
+  padding: 9px 0 0;
+}
+
+@media (max-width: 480px) {
+  .app { padding: 10px; }
+  .message { max-width: 94%; }
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>DarkGPT AI</h1>
+      <p>ذكاء اصطناعي • <span id="modeLabel">المساعد العام</span></p>
+    </div>
+    <button id="newChat" title="محادثة جديدة">＋ جديد</button>
+  </header>
+
+  <div class="toolbar">
+    <select id="mode" aria-label="نمط الذكاء الاصطناعي">
+      <option value="normal">🤖 DarkGPT AI</option>
+      <option value="deep">🧠 Deep Thinking</option>
+      <option value="coding">💻 Coding AI</option>
+      <option value="cybersecurity">🛡️ Cybersecurity</option>
+      <option value="negative">⚫ Dark Analysis</option>
+    </select>
+  </div>
+
+  <main id="chat" aria-live="polite">
+    <div class="welcome" id="welcome">
+      <div class="logo">⚡</div>
+      <h2>مرحباً بك في DarkGPT</h2>
+      <p>اسأل، تعلّم، حلّل، أو اكتب كوداً برمجياً.<br>
+      ابدأ محادثتك الآن.</p>
+    </div>
+  </main>
+
+  <div id="status"></div>
+
+  <form class="composer" id="form">
+    <textarea id="prompt" rows="1"
+      placeholder="اكتب رسالتك هنا..."
+      aria-label="رسالتك"></textarea>
+    <button id="send" type="submit" aria-label="إرسال">↑</button>
+  </form>
+
+  <div class="footer">DarkGPT AI • تأكد من المعلومات المهمة دائماً</div>
+</div>
+
+<script>
+const API_URL = ""; // أضف رابط الخادم عند توفره
+
+const chat = document.getElementById("chat");
+const promptBox = document.getElementById("prompt");
+const sendButton = document.getElementById("send");
+const statusBox = document.getElementById("status");
+const modeSelect = document.getElementById("mode");
+
+let history = [];
+let loading = false;
+
+const labels = {
+  normal: "المساعد العام",
+  deep: "التفكير التحليلي",
+  coding: "البرمجة",
+  cybersecurity: "الأمن السيبراني",
+  negative: "التحليل النقدي"
+};
+
+modeSelect.addEventListener("change", () => {
+  document.getElementById("modeLabel").textContent =
+    labels[modeSelect.value];
+});
+
+function addMessage(text, type = "ai", copyable = false) {
+  document.getElementById("welcome")?.remove();
+
+  const bubble = document.createElement("div");
+  bubble.className = "message " + type;
+
+  const content = document.createElement("div");
+  content.textContent = text;
+  bubble.appendChild(content);
+
+  if (copyable) {
+    const copy = document.createElement("button");
+    copy.className = "copy";
+    copy.textContent = "نسخ الإجابة";
+
+    copy.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        copy.textContent = "تم النسخ ✓";
+      } catch {
+        copy.textContent = "تعذر النسخ";
+      }
+    };
+
+    bubble.appendChild(copy);
+  }
+
+  chat.appendChild(bubble);
+  chat.scrollTop = chat.scrollHeight;
+  return bubble;
+}
+
+function setLoading(value) {
+  loading = value;
+  sendButton.disabled = value;
+  promptBox.disabled = value;
+  statusBox.textContent = value ? "DarkGPT يفكر..." : "";
+}
+
+async function sendMessage(event) {
+  event?.preventDefault();
+
+  const message = promptBox.value.trim();
+  if (!message || loading) return;
+
+  if (!API_URL) {
+    addMessage(message, "user");
+    promptBox.value = "";
+    addMessage(
+      "الواجهة تعمل، لكن لم يتم ربط خادم الذكاء الاصطناعي بعد. " +
+      "أضف رابط API في إعداد API_URL لتلقي إجابات حقيقية.",
+      "error"
+    );
+    return;
+  }
+
+  const oldHistory = history.map(item => ({...item}));
+  const mode = modeSelect.value;
+
+  addMessage(message, "user");
+  promptBox.value = "";
+  promptBox.style.height = "auto";
+
+  setLoading(true);
+  const waiting = addMessage("جارٍ الاتصال بالخادم...", "ai");
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        message,
+        mode,
+        history: oldHistory
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("HTTP " + response.status);
+    }
+
+    const data = await response.json();
+    const answer = String(
+      data.reply ?? data.message ?? data.response ??
+      "لم يرجع الخادم إجابة."
+    );
+
+    waiting.remove();
+    addMessage(answer, "ai", true);
+
+    history.push(
+      {role: "user", content: message},
+      {role: "assistant", content: answer}
+    );
+  } catch (error) {
+    waiting.remove();
+    addMessage(
+      "تعذر الاتصال بالخادم. تحقق من الرابط والإنترنت وإعدادات API.",
+      "error"
+    );
+  } finally {
+    setLoading(false);
+    promptBox.focus();
+  }
+}
+
+document.getElementById("form").addEventListener("submit", sendMessage);
+
+promptBox.addEventListener("input", () => {
+  promptBox.style.height = "auto";
+  promptBox.style.height =
+    Math.min(promptBox.scrollHeight, 140) + "px";
+});
+
+document.getElementById("newChat").addEventListener("click", () => {
+  if (loading) return;
+
+  history = [];
+  chat.replaceChildren();
+
+  const welcome = document.createElement("div");
+  welcome.id = "welcome";
+  welcome.className = "welcome";
+  welcome.innerHTML =
+    '<div class="logo">⚡</div>' +
+    '<h2>محادثة جديدة</h2>' +
+    '<p>اكتب رسالتك لبدء محادثة جديدة.</p>';
+
+  chat.appendChild(welcome);
+  statusBox.textContent = "";
+  modeSelect.value = "normal";
+  document.getElementById("modeLabel").textContent = labels.normal;
+});
+</script>
+</body>
+</html>
