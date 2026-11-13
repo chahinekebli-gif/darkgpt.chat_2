@@ -1,392 +1,305 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#080a10">
-<title>DarkGPT AI</title>
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Character Swap Studio</title>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 <style>
-:root {
-  --bg: #080a10;
-  --panel: #141824;
-  --blue: #3988ff;
-  --text: #f4f6ff;
-  --muted: #929bb0;
-}
-* { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100dvh;
-}
-
-.app {
-  max-width: 900px;
-  height: 100dvh;
-  margin: auto;
-  display: flex;
-  flex-direction: column;
-  padding: 14px;
-}
-
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #252b3a;
-}
-
-.brand h1 {
-  font-size: 23px;
-  margin: 0;
-  color: white;
-  text-shadow: 0 0 16px #3988ff66;
-}
-.brand p {
-  margin: 5px 0 0;
-  color: var(--blue);
-  font-size: 12px;
-}
-
-button, select, textarea { font: inherit; }
-
-button, select {
-  color: var(--text);
-  background: var(--panel);
-  border: 1px solid #293247;
-  border-radius: 12px;
-  padding: 11px;
-}
-
-button { cursor: pointer; }
-button:disabled { opacity: .5; cursor: default; }
-
-.toolbar {
-  display: flex;
-  gap: 8px;
-  padding: 12px 0;
-}
-.toolbar select { flex: 1; min-width: 0; }
-
-#chat {
-  flex: 1;
-  overflow-y: auto;
-  padding: 15px 2px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  scroll-behavior: smooth;
-}
-
-.welcome {
-  text-align: center;
-  margin: auto;
-  padding: 24px 10px;
-}
-.logo {
-  width: 76px;
-  height: 76px;
-  margin: auto auto 18px;
-  display: grid;
-  place-items: center;
-  border-radius: 25px;
-  font-size: 35px;
-  background: linear-gradient(145deg, #172b4d, #111521);
-  border: 1px solid #3988ff88;
-  box-shadow: 0 0 35px #3988ff22;
-}
-.welcome h2 { margin-bottom: 8px; }
-.welcome p { color: var(--muted); line-height: 1.8; }
-
-.message {
-  max-width: 88%;
-  padding: 14px;
-  border-radius: 18px;
-  line-height: 1.8;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-.user {
-  align-self: flex-start;
-  background: #173b72;
-  border: 1px solid #3988ff44;
-}
-.ai {
-  align-self: flex-end;
-  background: var(--panel);
-  border: 1px solid #ffffff0d;
-}
-.error {
-  background: #421d28;
-  align-self: flex-end;
-}
-.copy {
-  display: block;
-  padding: 5px 0 0;
-  border: 0;
-  background: transparent;
-  color: var(--blue);
-  font-size: 12px;
-}
-#status {
-  color: var(--blue);
-  font-size: 12px;
-  min-height: 18px;
-  padding: 4px 2px;
-}
-
-.composer {
-  display: flex;
-  align-items: flex-end;
-  gap: 9px;
-  padding-top: 10px;
-  border-top: 1px solid #252b3a;
-}
-#prompt {
-  flex: 1;
-  min-width: 0;
-  resize: none;
-  max-height: 140px;
-  padding: 15px;
-  border: 1px solid #293247;
-  border-radius: 20px;
-  outline: none;
-  background: var(--panel);
-  color: white;
-  line-height: 1.5;
-}
-#prompt:focus { border-color: var(--blue); }
-
-#send {
-  width: 52px;
-  height: 52px;
-  font-size: 23px;
-  border: 0;
-  background: var(--blue);
-  color: white;
-  border-radius: 18px;
-}
-
-.footer {
-  text-align: center;
-  color: #6f7789;
-  font-size: 11px;
-  padding: 9px 0 0;
-}
-
-@media (max-width: 480px) {
-  .app { padding: 10px; }
-  .message { max-width: 94%; }
-}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif}
+  body{background:#0b0f1a;color:#e6edf7;min-height:100vh;padding:24px}
+  .wrap{max-width:1100px;margin:0 auto}
+  h1{font-size:28px;background:linear-gradient(90deg,#7c5cff,#00d2ff,#00ffa3);
+     -webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:8px}
+  .sub{text-align:center;opacity:.65;margin-bottom:28px;font-size:14px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:780px){.grid{grid-template-columns:1fr}}
+  .panel{background:#151b2b;border:1px solid #222c44;border-radius:16px;padding:18px}
+  .panel h3{margin-bottom:12px;font-size:15px;color:#8fa3c8;text-transform:uppercase;letter-spacing:1px}
+  .drop{border:2px dashed #33405e;border-radius:12px;padding:30px;text-align:center;
+        cursor:pointer;transition:.2s;min-height:180px;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:8px}
+  .drop:hover{border-color:#7c5cff;background:#1a2238}
+  .drop input{display:none}
+  .drop p{font-size:13px;opacity:.6}
+  .preview{width:100%;border-radius:12px;max-height:220px;object-fit:cover;display:none}
+  .row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  button{padding:11px 20px;border:none;border-radius:10px;cursor:pointer;font-weight:700;
+         font-size:14px;transition:.2s}
+  .btn-main{background:linear-gradient(90deg,#7c5cff,#00d2ff);color:#fff;flex:1}
+  .btn-main:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(124,92,255,.45)}
+  .btn-main:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+  .btn-ghost{background:#1e2740;color:#c6d4ec}
+  canvas{width:100%;border-radius:12px;background:#000;display:none}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .stat{background:#0f1422;border:1px solid #222c44;border-radius:10px;padding:10px;text-align:center}
+  .stat b{display:block;font-size:20px;color:#00ffa3}
+  .stat span{font-size:11px;opacity:.6}
+  .range-row{display:flex;justify-content:space-between;font-size:13px;margin-top:10px;opacity:.8}
+  input[type=range]{width:100%;accent-color:#7c5cff;margin-top:6px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);
+         background:#00ffa3;color:#04110b;padding:12px 24px;border-radius:10px;font-weight:700;
+         transition:.3s;z-index:99}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .loading{display:none;text-align:center;padding:16px;color:#7c5cff;font-size:14px}
 </style>
 </head>
-
 <body>
-<div class="app">
-  <header>
-    <div class="brand">
-      <h1>DarkGPT AI</h1>
-      <p>ذكاء اصطناعي • <span id="modeLabel">المساعد العام</span></p>
-    </div>
-    <button id="newChat" title="محادثة جديدة">＋ جديد</button>
-  </header>
+<div class="wrap">
+  <h1>🎬 AI Character Swap Studio</h1>
+  <p class="sub">تغيير الشخصيات + مونتاج تلقائي بجودة عالية</p>
 
-  <div class="toolbar">
-    <select id="mode" aria-label="نمط الذكاء الاصطناعي">
-      <option value="normal">🤖 DarkGPT AI</option>
-      <option value="deep">🧠 Deep Thinking</option>
-      <option value="coding">💻 Coding AI</option>
-      <option value="cybersecurity">🛡️ Cybersecurity</option>
-      <option value="negative">⚫ Dark Analysis</option>
-    </select>
+  <div class="panel" style="margin-bottom:20px">
+    <h3>📹 الفيديو الأصلي</h3>
+    <label class="drop" id="videoDrop">
+      <input type="file" id="videoInput" accept="video/*">
+      <div id="videoDropContent">
+        <span style="font-size:34px">🎞️</span>
+        <b>اسحب فيديو هنا أو اضغط للاختيار</b>
+        <p>MP4, WebM, MOV — الأفضل تحت 30 ثانية</p>
+      </div>
+      <video id="preview" class="preview" controls></video>
+    </label>
   </div>
 
-  <main id="chat" aria-live="polite">
-    <div class="welcome" id="welcome">
-      <div class="logo">⚡</div>
-      <h2>مرحباً بك في DarkGPT</h2>
-      <p>اسأل، تعلّم، حلّل، أو اكتب كوداً برمجياً.<br>
-      ابدأ محادثتك الآن.</p>
+  <div class="grid">
+    <div class="panel">
+      <h3>🎭 صورة الشخصية الجديدة</h3>
+      <label class="drop" id="faceDrop">
+        <input type="file" id="faceInput" accept="image/*">
+        <div id="faceDropContent">
+          <span style="font-size:34px">🖼️</span>
+          <b>ارفع صورة الوجه</b>
+          <p>صورة واضحة لوجه واحد = أفضل نتيجة</p>
+        </div>
+        <img id="facePreview" class="preview">
+      </label>
     </div>
-  </main>
 
-  <div id="status"></div>
+    <div class="panel">
+      <h3>⚙️ إعدادات المونتاج</h3>
+      <div class="range-row"><span>قوة الدمج</span><span id="strengthVal">85%</span></div>
+      <input type="range" id="strength" min="30" max="100" value="85">
 
-  <form class="composer" id="form">
-    <textarea id="prompt" rows="1"
-      placeholder="اكتب رسالتك هنا..."
-      aria-label="رسالتك"></textarea>
-    <button id="send" type="submit" aria-label="إرسال">↑</button>
-  </form>
+      <div class="range-row"><span>نعومة الحواف</span><span id="blendVal">60%</span></div>
+      <input type="range" id="blend" min="0" max="100" value="60">
 
-  <div class="footer">DarkGPT AI • تأكد من المعلومات المهمة دائماً</div>
+      <div class="range-row"><span>حدّة التفاصيل</span><span id="sharpVal">40%</span></div>
+      <input type="range" id="sharp" min="0" max="100" value="40">
+
+      <div class="row">
+        <button class="btn-ghost" onclick="resetAll()">🔄 تصفير</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:20px">
+    <button class="btn-main" id="renderBtn" disabled onclick="renderVideo()">✨ ابدأ المونتاج التلقائي</button>
+  </div>
+
+  <div class="loading" id="loading">⏳ جاري تحليل الوجوه ودمج الشخصية...</div>
+
+  <div class="panel" style="margin-top:20px">
+    <h3>📺 النتيجة النهائية</h3>
+    <canvas id="output"></canvas>
+    <div class="stats">
+      <div class="stat"><b id="statFrames">0</b><span>إطارات معالجة</span></div>
+      <div class="stat"><b id="statFaces">0</b><span>وجوه مكتشفة</span></div>
+      <div class="stat"><b id="statFps">0</b><span>FPS معالجة</span></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <a class="btn-main" id="downloadBtn" style="display:none;text-align:center;
+         padding:12px;text-decoration:none;border-radius:10px" download="swapped.webm">⬇️ تحميل الفيديو</a>
+    </div>
+  </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-const API_URL = ""; // أضف رابط الخادم عند توفره
+const $ = id => document.getElementById(id);
+let videoFile, faceImage, videoEl, faceEl, faceApiReady = false;
+const models = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
 
-const chat = document.getElementById("chat");
-const promptBox = document.getElementById("prompt");
-const sendButton = document.getElementById("send");
-const statusBox = document.getElementById("status");
-const modeSelect = document.getElementById("mode");
+// ============ تحميل النماذج ============
+async function loadModels(){
+  await faceapi.nets.tinyFaceDetector.loadFromUri(models);
+  await faceapi.nets.faceLandmark68Net.loadFromUri(models);
+  faceApiReady = true;
+  toast('✅ نماذج AI جاهزة');
+}
+loadModels().catch(()=>toast('⚠️ تعذر تحميل النماذج — استخدم إنترنت'));
 
-let history = [];
-let loading = false;
-
-const labels = {
-  normal: "المساعد العام",
-  deep: "التفكير التحليلي",
-  coding: "البرمجة",
-  cybersecurity: "الأمن السيبراني",
-  negative: "التحليل النقدي"
-};
-
-modeSelect.addEventListener("change", () => {
-  document.getElementById("modeLabel").textContent =
-    labels[modeSelect.value];
+// ============ معاينة الفيديو ============
+$('videoInput').addEventListener('change', e => {
+  videoFile = e.target.files[0];
+  if(!videoFile) return;
+  const url = URL.createObjectURL(videoFile);
+  const prev = $('preview');
+  prev.src = url; prev.style.display = 'block';
+  $('videoDropContent').style.display = 'none';
+  checkReady();
 });
 
-function addMessage(text, type = "ai", copyable = false) {
-  document.getElementById("welcome")?.remove();
+// ============ معاينة الصورة ============
+$('faceInput').addEventListener('change', e => {
+  faceImage = e.target.files[0];
+  if(!faceImage) return;
+  const img = $('facePreview');
+  img.src = URL.createObjectURL(faceImage);
+  img.style.display = 'block';
+  $('faceDropContent').style.display = 'none';
+  checkReady();
+});
 
-  const bubble = document.createElement("div");
-  bubble.className = "message " + type;
+// ============ تفعيل زر البدء ============
+function checkReady(){
+  $('renderBtn').disabled = !(videoFile && faceImage && faceApiReady);
+}
 
-  const content = document.createElement("div");
-  content.textContent = text;
-  bubble.appendChild(content);
+// ============ المنزلقات ============
+['strength','blend','sharp'].forEach(id => {
+  const el = $(id);
+  el.addEventListener('input', () => {
+    $(id + 'Val').textContent = id === 'blend' ? el.value + '%' : el.value + '%';
+  });
+});
 
-  if (copyable) {
-    const copy = document.createElement("button");
-    copy.className = "copy";
-    copy.textContent = "نسخ الإجابة";
+// ============ المونتاج الرئيسي ============
+async function renderVideo(){
+  if(!(videoFile && faceImage)) return;
+  $('renderBtn').disabled = true;
+  $('loading').style.display = 'block';
+  $('downloadBtn').style.display = 'none';
 
-    copy.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(text);
-        copy.textContent = "تم النسخ ✓";
-      } catch {
-        copy.textContent = "تعذر النسخ";
+  let stats = { frames: 0, faces: 0 };
+  const startTime = performance.now();
+
+  // تحميل الفيديو والصورة
+  const video = document.createElement('video');
+  video.src = URL.createObjectURL(videoFile);
+  video.muted = true;
+  await video.play().catch(()=>{});
+  await new Promise(r => video.onloadedmetadata = r);
+  video.pause();
+
+  const faceImg = new Image();
+  faceImg.src = URL.createObjectURL(faceImage);
+  await new Promise(r => faceImg.onload = r);
+
+  const W = 640;
+  const H = Math.round(video.videoHeight / video.videoWidth * W) || 360;
+
+  const canvas = $('output');
+  canvas.width = W; canvas.height = H;
+  canvas.style.display = 'block';
+  const ctx = canvas.getContext('2d');
+
+  // كشف وجه الصورة المصدر مرة واحدة
+  const srcDetection = await faceapi.detectSingleFace(faceImg, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.4 }))
+    .withFaceLandmarks();
+  if(!srcDetection){
+    toast('⚠️ لم يتم كشف وجه في الصورة — استخدم صورة أوضح');
+  }
+  const srcBox = srcDetection ? srcDetection.detection.box : { x: 0, y: 0, width: faceImg.width, height: faceImg.height };
+
+  // تسجيل الفيديو الناتج
+  const stream = canvas.captureStream(24);
+  const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 6_000_000 });
+  const chunks = [];
+  recorder.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+  const done = new Promise(res => recorder.onstop = () => res(new Blob(chunks, { type:'video/webm' })));
+  recorder.start();
+
+  // معالجة الإطارات
+  const fps = 24;
+  const duration = video.duration || 5;
+  const totalFrames = Math.floor(duration * fps);
+  const strength = +$('strength').value / 100;
+  const blend = +$('blend').value / 100;
+  const sharp = +$('sharp').value / 100;
+
+  for(let i = 0; i < totalFrames; i++){
+    video.currentTime = i / fps;
+    await new Promise(r => video.onseeked = r);
+    ctx.drawImage(video, 0, 0, W, H);
+
+    // كشف الوجه في الإطار
+    const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.4 }))
+      .withFaceLandmarks();
+
+    if(det){
+      stats.faces++;
+      const box = det.detection.box;
+      const scaleW = W / video.videoWidth;
+      const scaleH = H / video.videoHeight;
+      const x = box.x * scaleW, y = box.y * scaleH;
+      const w = box.width * scaleW, h = box.height * scaleH;
+
+      // رسم الوجه المصدر مع دمج ذكي
+      ctx.save();
+      ctx.globalAlpha = strength;
+      // تحسين الحواف بقص دائري
+      ctx.beginPath();
+      ctx.ellipse(x + w/2, y + h/2, w*0.55*blend + w*0.45, h*0.6*blend + h*0.4, 0, 0, Math.PI*2);
+      ctx.clip();
+      ctx.drawImage(faceImg, srcBox.x, srcBox.y, srcBox.width, srcBox.height, x, y, w, h);
+      ctx.restore();
+
+      // تحسين الحدّة حول الوجه
+      if(sharp > 0){
+        ctx.save();
+        ctx.globalAlpha = sharp * 0.35;
+        ctx.filter = 'contrast(1.15) saturate(1.1)';
+        ctx.drawImage(faceImg, srcBox.x, srcBox.y, srcBox.width, srcBox.height, x, y, w, h);
+        ctx.restore();
       }
-    };
-
-    bubble.appendChild(copy);
-  }
-
-  chat.appendChild(bubble);
-  chat.scrollTop = chat.scrollHeight;
-  return bubble;
-}
-
-function setLoading(value) {
-  loading = value;
-  sendButton.disabled = value;
-  promptBox.disabled = value;
-  statusBox.textContent = value ? "DarkGPT يفكر..." : "";
-}
-
-async function sendMessage(event) {
-  event?.preventDefault();
-
-  const message = promptBox.value.trim();
-  if (!message || loading) return;
-
-  if (!API_URL) {
-    addMessage(message, "user");
-    promptBox.value = "";
-    addMessage(
-      "الواجهة تعمل، لكن لم يتم ربط خادم الذكاء الاصطناعي بعد. " +
-      "أضف رابط API في إعداد API_URL لتلقي إجابات حقيقية.",
-      "error"
-    );
-    return;
-  }
-
-  const oldHistory = history.map(item => ({...item}));
-  const mode = modeSelect.value;
-
-  addMessage(message, "user");
-  promptBox.value = "";
-  promptBox.style.height = "auto";
-
-  setLoading(true);
-  const waiting = addMessage("جارٍ الاتصال بالخادم...", "ai");
-
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        message,
-        mode,
-        history: oldHistory
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error("HTTP " + response.status);
     }
-
-    const data = await response.json();
-    const answer = String(
-      data.reply ?? data.message ?? data.response ??
-      "لم يرجع الخادم إجابة."
-    );
-
-    waiting.remove();
-    addMessage(answer, "ai", true);
-
-    history.push(
-      {role: "user", content: message},
-      {role: "assistant", content: answer}
-    );
-  } catch (error) {
-    waiting.remove();
-    addMessage(
-      "تعذر الاتصال بالخادم. تحقق من الرابط والإنترنت وإعدادات API.",
-      "error"
-    );
-  } finally {
-    setLoading(false);
-    promptBox.focus();
+    stats.frames++;
+    if(i % 5 === 0){
+      $('statFrames').textContent = stats.frames;
+      $('statFaces').textContent = stats.faces;
+    }
+    // الحفاظ على التزامن
+    await new Promise(r => requestAnimationFrame(r));
   }
+
+  recorder.stop();
+  const blob = await done;
+  const url = URL.createObjectURL(blob);
+  $('downloadBtn').href = url;
+  $('downloadBtn').style.display = 'block';
+
+  const elapsed = (performance.now() - startTime) / 1000;
+  const actualFps = Math.round(stats.frames / elapsed);
+  $('statFps').textContent = actualFps;
+
+  $('loading').style.display = 'none';
+  $('renderBtn').disabled = false;
+  toast('🎉 اكتمل المونتاج! اضغط تحميل');
 }
 
-document.getElementById("form").addEventListener("submit", sendMessage);
+// ============ تصفير ============
+function resetAll(){
+  videoFile = faceImage = null;
+  $('videoInput').value = ''; $('faceInput').value = '';
+  $('preview').style.display = 'none';
+  $('facePreview').style.display = 'none';
+  $('videoDropContent').style.display = 'flex';
+  $('faceDropContent').style.display = 'flex';
+  $('output').style.display = 'none';
+  $('downloadBtn').style.display = 'none';
+  $('renderBtn').disabled = true;
+  $('statFrames').textContent = $('statFaces').textContent = $('statFps').textContent = '0';
+  toast('🔄 تم التصفير');
+}
 
-promptBox.addEventListener("input", () => {
-  promptBox.style.height = "auto";
-  promptBox.style.height =
-    Math.min(promptBox.scrollHeight, 140) + "px";
-});
-
-document.getElementById("newChat").addEventListener("click", () => {
-  if (loading) return;
-
-  history = [];
-  chat.replaceChildren();
-
-  const welcome = document.createElement("div");
-  welcome.id = "welcome";
-  welcome.className = "welcome";
-  welcome.innerHTML =
-    '<div class="logo">⚡</div>' +
-    '<h2>محادثة جديدة</h2>' +
-    '<p>اكتب رسالتك لبدء محادثة جديدة.</p>';
-
-  chat.appendChild(welcome);
-  statusBox.textContent = "";
-  modeSelect.value = "normal";
-  document.getElementById("modeLabel").textContent = labels.normal;
-});
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
 </script>
 </body>
 </html>
